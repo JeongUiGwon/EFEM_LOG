@@ -1,0 +1,57 @@
+﻿<Window x:Class="RORZE_LOG.Views.MCLogView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:RORZE_LOG.Views"
+        xmlns:vm="clr-namespace:RORZE_LOG.ViewModels"
+        mc:Ignorable="d"
+        Title="MCLogView" Height="450" Width="800">
+
+    <Window.DataContext>
+        <vm:MCLogViewModel />
+    </Window.DataContext>
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Button Content="Log Open"
+              Command="{Binding OpenLogFilesCommand}"
+              Width="100" Height="30" Margin="0,0,0,10" />
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
+            <TextBlock Text="Type:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+            <ComboBox Width="100" ItemsSource="{Binding TypeOptions}" SelectedItem="{Binding TypeFilter, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,10,0"/>
+            <TextBlock Text="Command:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+            <ItemsControl ItemsSource="{Binding CommandOptionItems}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <CheckBox Content="{Binding Name}" IsChecked="{Binding IsChecked, Mode=TwoWay}" Margin="5,5"/>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock Text="Search:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+            <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Width="200" Margin="0,0,5,0"/>
+        </StackPanel>
+
+        <DataGrid Grid.Row="2" ItemsSource="{Binding MCLogRepository}" AutoGenerateColumns="False" IsReadOnly="True">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Time" Binding="{Binding Time}" Width="140" />
+                <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="50" />
+                <DataGridTextColumn Header="Command" Binding="{Binding Command}" Width="70" />
+                <DataGridTextColumn Header="Group" Binding="{Binding CommandGroup}" Width="70" />
+                <DataGridTextColumn Header="ElapsedTime" Binding="{Binding ElapsedTime}" Width="70" />
+                <DataGridTextColumn Header="Data" Binding="{Binding Data}" Width="*" />
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</Window>
