@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:RORZE_LOG.Views"
         xmlns:vm="clr-namespace:RORZE_LOG.ViewModels"
         mc:Ignorable="d"
-        Title="MCLogView" Height="450" Width="800">
+        Title="MCLogView" Height="500" Width="1000">
 
     <Window.DataContext>
         <vm:MCLogViewModel />
@@ -16,18 +16,30 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Button Content="Log Open"
-              Command="{Binding OpenLogFilesCommand}"
-              Width="100" Height="30" Margin="0,0,0,10" />
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,0" VerticalAlignment="Center" HorizontalAlignment="Left">
+            <Button Content="Log Open" Command="{Binding OpenLogFilesCommand}" Width="100" Height="30" Margin="0,5" />
+        </StackPanel>
 
-        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,0" VerticalAlignment="Center" HorizontalAlignment="Left">
+            <TextBlock Text="File Name :" VerticalAlignment="Center" Margin="0,10"/>
+            <TextBlock Text="{Binding FileName, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center" Margin="0,10"/>            
+        </StackPanel>
+
+        <Border Grid.Row="1" Background="White" Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <TextBlock Text="로딩 중..."  FontSize="16" FontWeight="Bold" Foreground="Black" HorizontalAlignment="Center"/>
+        </Border>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,10">
             <TextBlock Text="Type:" VerticalAlignment="Center" Margin="0,0,5,0"/>
             <ComboBox Width="100" ItemsSource="{Binding TypeOptions}" SelectedItem="{Binding TypeFilter, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,10,0"/>
-            <TextBlock Text="Command:" VerticalAlignment="Center" Margin="0,0,5,0"/>
-            <ItemsControl ItemsSource="{Binding CommandOptionItems}">
+            <TextBlock Text="Message :" VerticalAlignment="Center" Margin="0,0,5,0"/>
+            <ItemsControl ItemsSource="{Binding MessageOptionItems}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <StackPanel Orientation="Horizontal" />
@@ -39,17 +51,36 @@
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
+        </StackPanel>
+
+        <WrapPanel Grid.Row="3" Orientation="Horizontal" Margin="0,0,0,10">
+            <TextBlock Text="Command :" VerticalAlignment="Center" Margin="0,0,5,0"/>
+            <ItemsControl ItemsSource="{Binding CommandOptionItems}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <CheckBox Content="{Binding Name}" IsChecked="{Binding IsChecked, Mode=TwoWay}" Margin="5,5"/>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </WrapPanel>
+
+            <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,0,0,10">
             <TextBlock Text="Search:" VerticalAlignment="Center" Margin="0,0,5,0"/>
             <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Width="200" Margin="0,0,5,0"/>
         </StackPanel>
-
-        <DataGrid Grid.Row="2" ItemsSource="{Binding MCLogRepository}" AutoGenerateColumns="False" IsReadOnly="True">
+            
+        <DataGrid Grid.Row="5" ItemsSource="{Binding MCLogRepository}" AutoGenerateColumns="False" IsReadOnly="True">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Time" Binding="{Binding Time}" Width="140" />
                 <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="50" />
+                <DataGridTextColumn Header="Message" Binding="{Binding Message}" Width="70" />
                 <DataGridTextColumn Header="Command" Binding="{Binding Command}" Width="70" />
-                <DataGridTextColumn Header="Group" Binding="{Binding CommandGroup}" Width="70" />
-                <DataGridTextColumn Header="ElapsedTime" Binding="{Binding ElapsedTime}" Width="70" />
+                <DataGridTextColumn Header="Elapsed Time" Binding="{Binding ElapsedTime}" Width="70" />
                 <DataGridTextColumn Header="Data" Binding="{Binding Data}" Width="*" />
             </DataGrid.Columns>
         </DataGrid>

@@ -12,7 +12,7 @@ namespace RORZE_LOG.ViewModels
     public partial class MainViewModel : ObservableObject
     {
         [ObservableProperty]
-        private string title = "SFEM Log Analysis";
+        private string title = "SFEM Log Analysis ver0.1.0";
 
         [RelayCommand]
         private void OpenMcLogView()

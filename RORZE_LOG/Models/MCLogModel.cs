@@ -10,8 +10,8 @@ namespace RORZE_LOG.Models
     {
         public string Time { get; set; }
         public string Type { get; set; }
+        public string Message { get; set; }
         public string Command { get; set; }
-        public string CommandGroup { get; set; }
         public double ElapsedTime { get; set; }
         public string Data { get; set; }
     }

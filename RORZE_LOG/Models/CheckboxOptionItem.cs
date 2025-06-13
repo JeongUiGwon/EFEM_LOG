@@ -7,7 +7,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace RORZE_LOG.Models
 {
-    public partial class CommandOptionItem : ObservableObject
+    public partial class CheckboxOptionItem : ObservableObject
     {
         public string Name { get; set; }
 
