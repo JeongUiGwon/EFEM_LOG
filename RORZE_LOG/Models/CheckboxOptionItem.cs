@@ -12,6 +12,6 @@ namespace RORZE_LOG.Models
         public string Name { get; set; }
 
         [ObservableProperty]
-        private bool isChecked = true;
+        private bool isChecked = false;
     }
 }

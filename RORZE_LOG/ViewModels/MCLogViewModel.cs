@@ -21,47 +21,20 @@ namespace RORZE_LOG.ViewModels
     {
         public ObservableCollection<MCLogModel> MCLogRepository { get; } = new();
         public ICollectionView FilteredMCLogRepository { get; }
-
         public List<string> TypeOptions { get; } = new() { "All", "SED", "REC" };
-        public ObservableCollection<CheckboxOptionItem> MessageOptionItems { get; } = new()
+        private readonly string[] messageList = new string[]
         {
-            new CheckboxOptionItem { Name = "MOV" },
-            new CheckboxOptionItem { Name = "GET" },
-            new CheckboxOptionItem { Name = "SET" },
-            new CheckboxOptionItem { Name = "INF" },
-            new CheckboxOptionItem { Name = "ABS" },
-            new CheckboxOptionItem { Name = "EVT" },
-            new CheckboxOptionItem { Name = "ACK" },
-            new CheckboxOptionItem { Name = "NAK" },
-            new CheckboxOptionItem { Name = "CAN" }
+            "MOV", "GET", "SET", "INF", "ABS", "EVT", "ACK", "NAK", "CAN", "UNKNOWN"
         };
-        public ObservableCollection<CheckboxOptionItem> CommandOptionItems { get; } = new()
+        private readonly string[] commandList = new string[]
         {
-            new CheckboxOptionItem { Name = "INIT" },
-            new CheckboxOptionItem { Name = "ORGSH" },
-            new CheckboxOptionItem { Name = "LOCK" },
-            new CheckboxOptionItem { Name = "UNLOCK" },
-            new CheckboxOptionItem { Name = "DOCK" },
-            new CheckboxOptionItem { Name = "UNDOCK" },
-            new CheckboxOptionItem { Name = "OPEN" },
-            new CheckboxOptionItem { Name = "CLOSE" },
-            new CheckboxOptionItem { Name = "MAPDT" },
-            new CheckboxOptionItem { Name = "GOTO" },
-            new CheckboxOptionItem { Name = "LOAD" },
-            new CheckboxOptionItem { Name = "UNLOAD" },
-            new CheckboxOptionItem { Name = "ALIGN" },
-            new CheckboxOptionItem { Name = "ERROR" },
-            new CheckboxOptionItem { Name = "CLAMP" },
-            new CheckboxOptionItem { Name = "STATE" },
-            new CheckboxOptionItem { Name = "RFIDR" },
-            new CheckboxOptionItem { Name = "PIOUT" },
-            new CheckboxOptionItem { Name = "LAMPO" },
-            new CheckboxOptionItem { Name = "EMODE" },
-            new CheckboxOptionItem { Name = "SIGLM" },
-            new CheckboxOptionItem { Name = "N2RUN" },
-            new CheckboxOptionItem { Name = "N2STS" },
-            new CheckboxOptionItem { Name = "UNKNOWN" }
+            "INIT", "ORGSH", "LOCK", "UNLOCK", "DOCK", "UNDOCK", "OPEN", "CLOSE",
+            "MAPDT", "GOTO", "LOAD", "UNLOAD", "ALIGN", "ERROR", "CLAMP", "STATE",
+            "RFIDR", "PIOUT", "LAMPO", "EMODE", "SIGLM", "N2RUN", "N2STS", "UNKNOWN"
         };
+
+        public ObservableCollection<CheckboxOptionItem> MessageOptionItems { get; }
+        public ObservableCollection<CheckboxOptionItem> CommandOptionItems { get; }
 
         [ObservableProperty]
         private string typeFilter = "All";
@@ -73,21 +46,34 @@ namespace RORZE_LOG.ViewModels
         private string fileName = string.Empty;
 
         [ObservableProperty]
-        private bool isLoading;
+        private bool isLoading = false;
+
+        [ObservableProperty]
+        private int filteredCount = 0;
 
         public MCLogViewModel()
         {
+            MessageOptionItems = new ObservableCollection<CheckboxOptionItem>();
+            foreach (string message in messageList)
+            {
+                MessageOptionItems.Add(new CheckboxOptionItem { Name = message });
+            }
+
+            CommandOptionItems = new ObservableCollection<CheckboxOptionItem>();
+            foreach (string command in commandList)
+            {
+                CommandOptionItems.Add(new CheckboxOptionItem { Name = command });
+            }
+
             FilteredMCLogRepository = CollectionViewSource.GetDefaultView(MCLogRepository);
             FilteredMCLogRepository.Filter = ApplyFilter;
+            FilteredMCLogRepository.CollectionChanged += (s, e) => FilteredCount = FilteredMCLogRepository.Cast<object>().Count();
 
-            foreach (var item in MessageOptionItems)
+            foreach (CheckboxOptionItem item in MessageOptionItems)
             {
                 item.PropertyChanged += (_, e) =>
                 {
-                    if (e.PropertyName == nameof(CheckboxOptionItem.IsChecked))
-                    {
-                        FilteredMCLogRepository.Refresh();
-                    }
+                    FilteredMCLogRepository.Refresh();
                 };
             }
 
@@ -116,15 +102,22 @@ namespace RORZE_LOG.ViewModels
                                    .Select(x => x.Name)
                                    .ToList();
 
-                if (selectedMessages.Count == 0) return false;
+                bool MessageMatches = true;
+                if (selectedMessages.Count != 0)
+                {
+                    MessageMatches = selectedMessages.Contains(log.Message);
+                }
 
                 var selectedCommands = CommandOptionItems
-                                   .Where(x => x.IsChecked)
-                                   .Select(x => x.Name)
-                                   .ToList();
+                                       .Where(x => x.IsChecked)
+                                       .Select(x => x.Name)
+                                       .ToList();
 
-                bool MessageMatches = selectedMessages.Contains(log.Message);
-                bool CommandMatches = selectedCommands.Contains(log.Command);
+                bool CommandMatches = true;
+                if (selectedCommands.Count != 0)
+                {
+                    CommandMatches = selectedCommands.Contains(log.Command);
+                }
 
                 bool searchMatches = string.IsNullOrEmpty(SearchText) || log.Data.IndexOf(SearchText, StringComparison.OrdinalIgnoreCase) >= 0;
 
@@ -228,40 +221,27 @@ namespace RORZE_LOG.ViewModels
             }
             return elapsedTime;
         }
+        string GetMessage(string message)
+        {
+            string ret_message = "UNKNOWN";
+            message = message.Trim();
+
+            if (messageList.Contains(message))
+            {
+                ret_message = message;
+            }
+
+            return ret_message;
+        }
 
         string GetCommand(string command)
         {
             string ret_command = "UNKNOWN";
+            command = command.Trim().Replace(";", "");
 
-            switch (command)
+            if (commandList.Contains(command))
             {
-                case "INIT":
-                case "ORGSH":
-                case "LOCK":
-                case "UNLOCK":
-                case "DOCK":
-                case "UNDOCK":
-                case "OPEN":
-                case "CLOSE":
-                case "MAPDT":
-                case "GOTO":
-                case "LOAD":
-                case "UNLOAD":
-                case "ALIGN":
-                case "ERROR":
-                case "CLAMP":
-                case "STATE":
-                case "RFIDR":
-                case "PIOUT":
-                case "LAMPO":
-                case "EMODE":
-                case "SIGLM":
-                case "N2RUN":
-                case "N2STS":
-                    ret_command = command;
-                    break;
-                default:
-                    break;
+                ret_command = command;
             }
 
             return ret_command;
@@ -284,7 +264,7 @@ namespace RORZE_LOG.ViewModels
                 if (dialog.ShowDialog() == true)
                 {
                     FileName = string.Empty;
-                    MCLogRepository.Clear();
+                    var temp_MCLogRepository = new List<MCLogModel>();
                     var timePattern = new Regex(@"^\d{2}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}:\d{3}");
 
                     var names = dialog.FileNames.Select(path => Path.GetFileName(path));
@@ -298,10 +278,8 @@ namespace RORZE_LOG.ViewModels
                             string type = "";
                             string message = "";
                             string command = "";
-                            string commandGroup = "";
                             string data = line;
                             string remainder = data;
-                            string remainder2 = data;
                             double elapsedTime = 0.0;
 
                             var match = timePattern.Match(line);
@@ -313,16 +291,15 @@ namespace RORZE_LOG.ViewModels
 
                             var parts = data.Split(':', 3);
                             if (parts.Length > 0) type = parts[0].Trim();
-                            if (parts.Length > 1) message = parts[1].Trim();
+                            if (parts.Length > 1) message = GetMessage(parts[1]);
                             if (parts.Length > 2) remainder = parts[2].Trim();
 
                             parts = remainder.Split('/');
-                            if (parts.Length > 0) command = GetCommand(parts[0].Trim().Replace(";",""));
-                            if (parts.Length > 1) remainder2 = parts[1].Trim();
+                            if (parts.Length > 0) command = GetCommand(parts[0]);
 
                             elapsedTime = calcuateMCLogElapsedTime(time, message, remainder);
 
-                            MCLogRepository.Add(new MCLogModel
+                            temp_MCLogRepository.Add(new MCLogModel
                             {
                                 Time = time,
                                 Type = type,
@@ -332,6 +309,12 @@ namespace RORZE_LOG.ViewModels
                                 Data = remainder
                             });
                         }
+                    }
+
+                    MCLogRepository.Clear();
+                    foreach (var item in temp_MCLogRepository)
+                    {
+                        MCLogRepository.Add(item);
                     }
                 }
             }
