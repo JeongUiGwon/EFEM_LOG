@@ -113,6 +113,7 @@
 
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="15,15,15,5">
             <Button Content="Open" Command="{Binding OpenLogFilesCommand}" Width="100" Height="35"/>
+            <Button Content="Export CSV" Command="{Binding ExportToCSVCommand}" Width="100" Height="35" Margin="10,0"/>
         </StackPanel>
 
         <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="15,5">

@@ -14,11 +14,13 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using RORZE_LOG.Models;
+using RORZE_LOG.Services;
 
 namespace RORZE_LOG.ViewModels
 {
     public partial class MCLogViewModel : ObservableObject
     {
+        private readonly Services.TypeConverter _typeConverter;
         public ObservableCollection<MCLogModel> MCLogRepository { get; } = new();
         public ICollectionView FilteredMCLogRepository { get; }
         public List<string> TypeOptions { get; } = new() { "All", "SED", "REC" };
@@ -51,8 +53,12 @@ namespace RORZE_LOG.ViewModels
         [ObservableProperty]
         private int filteredCount = 0;
 
+        Dictionary<string, HandShakeModel> handshakes = new Dictionary<string, HandShakeModel>();
+        HandShakeModel alignHandshake = new HandShakeModel();
+
         public MCLogViewModel()
         {
+            _typeConverter = new Services.TypeConverter();
             MessageOptionItems = new ObservableCollection<CheckboxOptionItem>();
             foreach (string message in messageList)
             {
@@ -126,101 +132,100 @@ namespace RORZE_LOG.ViewModels
             return false;
         }
 
-        private DateTime convertToDateTime(string time)
-        {
-            if (string.IsNullOrEmpty(time)) return DateTime.MinValue;
-            try
-            {
-                // Assuming the format is "MM-dd-yy HH:mm:ss:fff"
-                return DateTime.ParseExact(time, "yy-MM-dd HH:mm:ss:fff", null);
-            }
-            catch
-            {
-                return DateTime.MinValue; // Return a default value if parsing fails
-            }
-        }
-
-        Dictionary<string, HandShakeModel> handshakes = new Dictionary<string, HandShakeModel>();
-
-        private double calcuateMCLogElapsedTime(string time, string command, string data)
+        private double calLoadUnloadElapsedTime(string time, string message, string command, string data)
         {
             double elapsedTime = 0.0;
 
-            switch (command)
+            if ( command != "LOAD" && command != "UNLOAD" ) return elapsedTime;
+
+            if ( message == "MOV" )
             {
-                case "MOV":
-                    if (handshakes.ContainsKey(data).Equals(true))
-                    {
-                        handshakes.Remove(data);
-                    }
+                if (handshakes.ContainsKey(data).Equals(true))
+                {
+                    handshakes.Remove(data);
+                }
 
-                    handshakes.Add(data, new HandShakeModel() { Name = data, Type = command, StartTime = convertToDateTime(time) });
-                    return elapsedTime;
-                case "SET":
-                    if (handshakes.ContainsKey("ALIGN").Equals(true))
-                    {
-                        handshakes.Remove("ALIGN");
-                    }
-
-                    handshakes.Add("ALIGN", new HandShakeModel() { Name = "ALIGN", Type = command, StartTime = convertToDateTime(time) });
-                    return elapsedTime;
-                case "INF":
-                    if (handshakes.ContainsKey(data).Equals(true))
-                    {
-                        handshakes[data].InfTime = convertToDateTime(time);
-                        elapsedTime = (handshakes[data].InfTime - handshakes[data].StartTime).TotalMilliseconds;
-                        elapsedTime /= 1000.0; // Convert to seconds
-                        return elapsedTime;
-                    }
-                    break;
-                case "ACK":
-                    if(data.Contains("STATE"))
-                    {
-                        return elapsedTime; // Ignore STATE ACKs for elapsed time calculation
-                    }
-
-                    if (handshakes.ContainsKey(data).Equals(false))
-                    {
-                        break;
-                    }
-
-                        if (data.Contains("ALIGN") && !data.Contains("ALIGN2"))
-                    {
-                        if (handshakes["ALIGN"].InfTime != DateTime.MinValue)
-                        {
-                            handshakes["ALIGN"].StartAckTime = convertToDateTime(time);
-                            elapsedTime = (handshakes["ALIGN"].StartAckTime - handshakes["ALIGN"].StartTime).TotalMilliseconds;
-                        }
-                        else
-                        {
-                            handshakes["ALIGN"].InfAckTime = convertToDateTime(time);
-                            elapsedTime = (handshakes["ALIGN"].InfAckTime - handshakes["ALIGN"].StartTime).TotalMilliseconds;
-                        }
-                        elapsedTime /= 1000.0; // Convert to seconds
-                        return elapsedTime;
-                    }
-
-                    if (handshakes.ContainsKey(data).Equals(true))
-                    {
-                        if (handshakes[data].InfTime != DateTime.MinValue)
-                        {
-                            handshakes[data].StartAckTime = convertToDateTime(time);
-                            elapsedTime = (handshakes[data].StartAckTime - handshakes[data].StartTime).TotalMilliseconds;
-                        }
-                        else
-                        {
-                            handshakes[data].InfAckTime = convertToDateTime(time);
-                            elapsedTime = (handshakes[data].InfAckTime - handshakes[data].StartTime).TotalMilliseconds;
-                        }
-                        elapsedTime /= 1000.0; // Convert to seconds
-                        return elapsedTime;
-                    }
-                    break;
-                default:
-                    break;
+                handshakes.Add(data, new HandShakeModel() { Name = data, Type = command, StartTime = _typeConverter.stringToDateTime(time) });
             }
+            else if ( message == "INF")
+            {
+                if (handshakes.ContainsKey(data).Equals(true))
+                {
+                    handshakes[data].InfTime = _typeConverter.stringToDateTime(time);
+                    elapsedTime = (handshakes[data].InfTime - handshakes[data].StartTime).TotalMilliseconds;
+                    elapsedTime /= 1000.0; // Convert to seconds
+                }
+            }
+            else if ( message == "ACK" )
+            {
+                if (handshakes.ContainsKey(data).Equals(false)) return elapsedTime;
+
+                if (handshakes[data].InfTime != DateTime.MinValue)
+                {
+                    handshakes[data].StartAckTime = _typeConverter.stringToDateTime(time);
+                    elapsedTime = (handshakes[data].StartAckTime - handshakes[data].StartTime).TotalMilliseconds;
+                }
+                else
+                {
+                    handshakes[data].InfAckTime = _typeConverter.stringToDateTime(time);
+                    elapsedTime = (handshakes[data].InfAckTime - handshakes[data].StartTime).TotalMilliseconds;
+                }
+
+                elapsedTime /= 1000.0; // Convert to seconds
+            }
+
             return elapsedTime;
         }
+
+        private double calAlignElapsedTime(string time, string message, string command, string data)
+        {
+            double elapsedTime = 0.0;
+
+            if ( command != "ALIGN" ) return elapsedTime;
+
+            if ( message == "MOV" )
+            {
+                alignHandshake.Clear();
+
+                alignHandshake.Name = "MOV/ALIGN";
+                alignHandshake.StartTime = _typeConverter.stringToDateTime(time);
+            }
+            else if ( message == "SET" )
+            {
+                alignHandshake.Clear();
+
+                alignHandshake.Name = "SET/ALIGN";
+                alignHandshake.StartTime = _typeConverter.stringToDateTime(time);
+            }
+            else if (message == "INF")
+            {
+                if (alignHandshake.StartTime == DateTime.MinValue) return elapsedTime;
+
+                alignHandshake.InfTime = _typeConverter.stringToDateTime(time);
+                elapsedTime = (alignHandshake.InfTime - alignHandshake.StartTime).TotalMilliseconds;
+                elapsedTime /= 1000.0; // Convert to seconds
+            }
+            else if (message == "ACK")
+            {
+                if (alignHandshake.StartTime == DateTime.MinValue) return elapsedTime;
+
+                if (alignHandshake.InfTime != DateTime.MinValue)
+                {
+                    alignHandshake.StartAckTime = _typeConverter.stringToDateTime(time);
+                    elapsedTime = (alignHandshake.StartAckTime - alignHandshake.StartTime).TotalMilliseconds;
+                }
+                else
+                {
+                    alignHandshake.InfAckTime = _typeConverter.stringToDateTime(time);
+                    elapsedTime = (alignHandshake.InfAckTime - alignHandshake.StartTime).TotalMilliseconds;
+                }
+
+                elapsedTime /= 1000.0; // Convert to seconds
+            }
+
+            return elapsedTime;
+        }
+
         string GetMessage(string message)
         {
             string ret_message = "UNKNOWN";
@@ -297,7 +302,14 @@ namespace RORZE_LOG.ViewModels
                             parts = remainder.Split('/');
                             if (parts.Length > 0) command = GetCommand(parts[0]);
 
-                            elapsedTime = calcuateMCLogElapsedTime(time, message, remainder);
+                            if (command == "LOAD" || command == "UNLOAD")
+                            {
+                                elapsedTime = calLoadUnloadElapsedTime(time, message, command, remainder);
+                            }
+                            else if (command == "ALIGN")
+                            {
+                                elapsedTime = calAlignElapsedTime(time, message, command, remainder);
+                            }
 
                             temp_MCLogRepository.Add(new MCLogModel
                             {
@@ -322,6 +334,42 @@ namespace RORZE_LOG.ViewModels
             {
                 IsLoading = false;
             }            
+        }
+
+        [RelayCommand]
+        private void ExportToCSV()
+        {
+            var dialog = new SaveFileDialog
+            {
+                Filter = "CSV files (*.csv)|*.csv",
+                DefaultExt = "csv",
+                FileName = $"MCLog_Export_{DateTime.Now:yyyyMMdd_HHmmss}.csv"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                try
+                {
+                    using (var writer = new StreamWriter(dialog.FileName, false, Encoding.UTF8))
+                    {
+                        // Write header
+                        writer.WriteLine("Time,Type,Message,Command,ElapsedTime,Data");
+
+                        // Write data
+                        foreach (MCLogModel log in FilteredMCLogRepository)
+                        {
+                            var line = $"{log.Time},{log.Type},{log.Message},{log.Command},{log.ElapsedTime:F3},\"{log.Data.Replace("\"", "\"\"")}\"";
+                            writer.WriteLine(line);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // You might want to show an error message to the user here
+                    System.Windows.MessageBox.Show($"Error exporting to CSV: {ex.Message}", "Export Error", 
+                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                }
+            }
         }
     }
 }
